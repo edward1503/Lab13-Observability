@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Observability Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    header h1 { font-size: 1.5rem; color: #2b6cb0; letter-spacing: .5px; }
+    .badge {
+      font-size: .75rem;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .badge.online  { background: #c6f6d5; color: #276749; border: 1px solid #9ae6b4; }
+    .badge.offline { background: #fed7d7; color: #c53030; border: 1px solid #fc8181; }
+    .refresh-info { font-size: .8rem; color: #718096; }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px)  { .grid { grid-template-columns: 1fr; } }
+
+    /* ── Panel ── */
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 18px 20px 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .panel-title {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #718096;
+      margin-bottom: 14px;
+    }
+
+    /* ── Big number ── */
+    .big { font-size: 2.4rem; font-weight: 700; color: #1a202c; line-height: 1; }
+    .unit { font-size: .85rem; color: #718096; margin-left: 4px; }
+
+    /* ── Stat row ── */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid #edf2f7;
+      font-size: .88rem;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: #718096; }
+    .stat-val   { font-weight: 600; color: #2d3748; }
+
+    /* ── SLO badge ── */
+    .slo-ok   { color: #276749; font-size: .7rem; background: #c6f6d5; border: 1px solid #9ae6b4; border-radius: 10px; padding: 1px 7px; margin-left: 6px; }
+    .slo-warn { color: #744210; font-size: .7rem; background: #fefcbf; border: 1px solid #f6e05e; border-radius: 10px; padding: 1px 7px; margin-left: 6px; }
+    .slo-crit { color: #c53030; font-size: .7rem; background: #fed7d7; border: 1px solid #fc8181; border-radius: 10px; padding: 1px 7px; margin-left: 6px; }
+
+    /* ── Chart ── */
+    .chart-wrap { position: relative; height: 160px; margin-top: 14px; }
+
+    /* ── Error list ── */
+    .err-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 8px;
+      background: #fff5f5;
+      border-left: 3px solid #fc8181;
+      border-radius: 4px;
+      margin-top: 6px;
+      font-size: .82rem;
+      color: #c53030;
+    }
+    .no-errors { color: #276749; font-size: .88rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#9685; Observability Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <span id="status-badge" class="badge offline">Connecting...</span>
+    <span class="refresh-info" id="last-update">–</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- Panel 1 ── Latency -->
+  <div class="panel">
+    <div class="panel-title">&#9201; Latency (P50 / P95 / P99)</div>
+    <div class="stat-row">
+      <span class="stat-label">P50</span>
+      <span class="stat-val"><span id="p50">–</span> ms</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">
+        P95
+        <span id="p95-slo" class="slo-ok">SLO</span>
+      </span>
+      <span class="stat-val"><span id="p95">–</span> ms</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">P99</span>
+      <span class="stat-val"><span id="p99">–</span> ms</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartLatency"></canvas></div>
+  </div>
+
+  <!-- Panel 2 ── Traffic -->
+  <div class="panel">
+    <div class="panel-title">&#128200; Traffic</div>
+    <div class="big" id="traffic">–</div>
+    <div style="font-size:.8rem;color:#8b949e;margin-top:4px;">total requests</div>
+    <div class="chart-wrap"><canvas id="chartTraffic"></canvas></div>
+  </div>
+
+  <!-- Panel 3 ── Error Rate -->
+  <div class="panel">
+    <div class="panel-title">&#10060; Error Rate</div>
+    <div style="display:flex;align-items:baseline;gap:8px;">
+      <div class="big" id="error-rate">0%</div>
+      <span id="error-slo" class="slo-ok">SLO &lt;2%</span>
+    </div>
+    <div class="stat-row" style="margin-top:10px;">
+      <span class="stat-label">Total errors</span>
+      <span class="stat-val" id="error-count">0</span>
+    </div>
+    <div id="error-breakdown">
+      <div class="no-errors">&#10003; No errors</div>
+    </div>
+  </div>
+
+  <!-- Panel 4 ── Cost -->
+  <div class="panel">
+    <div class="panel-title">&#128176; Cost (GPT-4o-mini)</div>
+    <div class="stat-row">
+      <span class="stat-label">Total</span>
+      <span class="stat-val">$<span id="total-cost">0.000000</span></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Avg / request</span>
+      <span class="stat-val">$<span id="avg-cost">0.000000</span></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Daily budget (SLO)</span>
+      <span class="stat-val">$2.50</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartCost"></canvas></div>
+  </div>
+
+  <!-- Panel 5 ── Tokens -->
+  <div class="panel">
+    <div class="panel-title">&#128195; Tokens In / Out</div>
+    <div class="stat-row">
+      <span class="stat-label">Tokens In</span>
+      <span class="stat-val" id="tokens-in">–</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Tokens Out</span>
+      <span class="stat-val" id="tokens-out">–</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Ratio Out/In</span>
+      <span class="stat-val" id="token-ratio">–</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartTokens"></canvas></div>
+  </div>
+
+  <!-- Panel 6 ── Quality -->
+  <div class="panel">
+    <div class="panel-title">&#11088; Quality Score</div>
+    <div style="display:flex;align-items:baseline;gap:8px;">
+      <div class="big" id="quality">–</div>
+      <span class="unit">/ 1.0</span>
+      <span id="quality-slo" class="slo-ok">SLO &gt;0.75</span>
+    </div>
+    <div class="chart-wrap" style="height:180px;"><canvas id="chartQuality"></canvas></div>
+  </div>
+
+</div><!-- /grid -->
+
+<script>
+// ── Chart helpers ──────────────────────────────────────────────
+const COLORS = {
+  blue:   '#3182ce',
+  green:  '#38a169',
+  red:    '#e53e3e',
+  yellow: '#d69e2e',
+  purple: '#805ad5',
+  cyan:   '#00b5d8',
+};
+
+function makeChart(id, label, color, type = 'line') {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type,
+    data: {
+      labels: [],
+      datasets: [{
+        label,
+        data: [],
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 2,
+        pointRadius: 2,
+        tension: 0.3,
+        fill: type === 'line',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: '#e2e8f0' },
+          ticks: { color: '#718096', font: { size: 10 } },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+function makeBarChart(id, labels, colors) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: [0, 0],
+        backgroundColor: colors,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#718096', font: { size: 10 } }, grid: { display: false } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { color: '#718096', font: { size: 10 } }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ── Init charts ────────────────────────────────────────────────
+const charts = {
+  latency: makeChart('chartLatency', 'P95 Latency (ms)', COLORS.blue),
+  traffic: makeChart('chartTraffic', 'Requests', COLORS.green),
+  cost:    makeChart('chartCost',    'Total Cost ($)', COLORS.yellow),
+  quality: makeChart('chartQuality', 'Quality Score', COLORS.purple),
+  tokens:  makeBarChart('chartTokens', ['Tokens In', 'Tokens Out'], [COLORS.cyan, COLORS.blue]),
+};
+
+function pushPoint(chart, value) {
+  const d = chart.data;
+  const n = d.labels.length + 1;
+  d.labels.push(n);
+  d.datasets[0].data.push(value);
+  if (d.labels.length > 30) {
+    d.labels.shift();
+    d.datasets[0].data.shift();
+  }
+  chart.update('none');
+}
+
+// ── SLO helpers ────────────────────────────────────────────────
+function sloClass(ok, warn) {
+  return ok ? 'slo-ok' : warn ? 'slo-warn' : 'slo-crit';
+}
+
+function fmt(n, digits = 0) {
+  if (n === undefined || n === null) return '–';
+  return Number(n).toFixed(digits);
+}
+
+// ── Update UI ──────────────────────────────────────────────────
+function updateDashboard(m) {
+  // Panel 1 – Latency
+  document.getElementById('p50').textContent = fmt(m.latency_p50);
+  document.getElementById('p95').textContent = fmt(m.latency_p95);
+  document.getElementById('p99').textContent = fmt(m.latency_p99);
+  const p95ok = m.latency_p95 <= 3000;
+  const p95el = document.getElementById('p95-slo');
+  p95el.className = sloClass(p95ok, m.latency_p95 <= 5000);
+  p95el.textContent = p95ok ? 'OK' : 'BREACH';
+  pushPoint(charts.latency, m.latency_p95 || 0);
+
+  // Panel 2 – Traffic
+  document.getElementById('traffic').textContent = m.traffic || 0;
+  pushPoint(charts.traffic, m.traffic || 0);
+
+  // Panel 3 – Error Rate
+  const errRate = m.traffic ? ((m.error_count / m.traffic) * 100) : 0;
+  document.getElementById('error-rate').textContent = errRate.toFixed(1) + '%';
+  document.getElementById('error-count').textContent = m.error_count || 0;
+  const errOk = errRate <= 2;
+  const errEl = document.getElementById('error-slo');
+  errEl.className = sloClass(errOk, errRate <= 5);
+  errEl.textContent = errOk ? 'SLO <2%' : 'SLO BREACH';
+  const bd = m.error_breakdown || {};
+  const bdEl = document.getElementById('error-breakdown');
+  const keys = Object.keys(bd);
+  if (keys.length === 0) {
+    bdEl.innerHTML = '<div class="no-errors">&#10003; No errors</div>';
+  } else {
+    bdEl.innerHTML = keys.map(k =>
+      `<div class="err-item"><span>${k}</span><strong>${bd[k]}</strong></div>`
+    ).join('');
+  }
+
+  // Panel 4 – Cost
+  document.getElementById('total-cost').textContent = fmt(m.total_cost_usd, 6);
+  document.getElementById('avg-cost').textContent = fmt(m.avg_cost_usd, 6);
+  pushPoint(charts.cost, m.total_cost_usd || 0);
+
+  // Panel 5 – Tokens
+  const ti = m.tokens_in_total || 0;
+  const to = m.tokens_out_total || 0;
+  document.getElementById('tokens-in').textContent = ti.toLocaleString();
+  document.getElementById('tokens-out').textContent = to.toLocaleString();
+  document.getElementById('token-ratio').textContent = ti ? (to / ti).toFixed(2) : '–';
+  charts.tokens.data.datasets[0].data = [ti, to];
+  charts.tokens.update('none');
+
+  // Panel 6 – Quality
+  const q = m.quality_avg || 0;
+  document.getElementById('quality').textContent = fmt(q, 2);
+  const qEl = document.getElementById('quality-slo');
+  qEl.className = sloClass(q >= 0.75, q >= 0.6);
+  qEl.textContent = q >= 0.75 ? 'OK' : 'LOW';
+  pushPoint(charts.quality, q);
+}
+
+// ── Fetch loop ─────────────────────────────────────────────────
+async function tick() {
+  try {
+    const res = await fetch('/metrics');
+    if (!res.ok) throw new Error(res.status);
+    const m = await res.json();
+
+    document.getElementById('status-badge').className = 'badge online';
+    document.getElementById('status-badge').textContent = 'Live';
+    document.getElementById('last-update').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+
+    updateDashboard(m);
+  } catch (e) {
+    document.getElementById('status-badge').className = 'badge offline';
+    document.getElementById('status-badge').textContent = 'Offline';
+    document.getElementById('last-update').textContent = 'Cannot reach :8000';
+  }
+}
+
+tick();
+setInterval(tick, 5000);
+</script>
+</body>
+</html>
