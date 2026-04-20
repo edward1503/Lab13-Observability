@@ -31,7 +31,10 @@ Expected terminal evidence:
 
 Baseline evidence:
 
-- Total traces observed:
+- Local terminal run: `python scripts/load_test.py --concurrency 5`
+- Local result: `Completed=10`, `Failed=0`, `Avg latency=726.1ms`, `P95 latency=795.5ms`, `Tokens in/out=340/1411`, `Total cost_usd=0.022185`
+- Langfuse tracing status during local run: `tracing_enabled=false` because `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` were not populated.
+- Total traces observed: Pending Langfuse credentials
 - Trace list screenshot: `docs/evidence/langfuse_trace_list.png`
 
 ## Scenario: rag_slow
@@ -47,10 +50,11 @@ python scripts/inject_incident.py --scenario rag_slow --disable
 Incident Response Summary:
 
 - Scenario: `rag_slow`
-- Trace ID:
-- Root Cause: RAG retrieval is the bottleneck. The `rag_slow` incident adds delay in retrieval, so request latency and the RAG span should increase by roughly 2.5 seconds.
+- Trace ID: Pending Langfuse credentials
+- Root Cause: RAG retrieval is the bottleneck. The `rag_slow` incident adds delay in retrieval, so request latency increased from baseline `P95=795.5ms` to `P95=5336.0ms` in the local evidence run.
 - Evidence: `docs/evidence/rag_slow_trace.png`
-- Notes:
+- Local terminal evidence: `Completed=10`, `Failed=0`, `Avg latency=5329.2ms`, `P95 latency=5336.0ms`, `Tokens in/out=340/1256`, `Total cost_usd=0.01986`
+- Notes: The clean local evidence run used `python scripts/load_test.py --concurrency 2 --timeout 60` because the first `--concurrency 5` incident run produced one local connection reset while still showing the latency spike.
 
 What to say in presentation:
 
@@ -69,9 +73,10 @@ python scripts/inject_incident.py --scenario cost_spike --disable
 Incident Response Summary:
 
 - Scenario: `cost_spike`
-- Trace ID:
-- Root Cause: Mock LLM output tokens increase during `cost_spike`, so `tokens_out` and `cost_usd` rise while the model name stays the same.
+- Trace ID: Pending Langfuse credentials
+- Root Cause: Mock LLM output tokens increase during `cost_spike`, so `tokens_out` rose from baseline `1411` to `5556` and `cost_usd` rose from `0.022185` to `0.08436` while latency stayed near baseline.
 - Evidence: `docs/evidence/cost_spike_trace.png`
+- Local terminal evidence: `Completed=10`, `Failed=0`, `Avg latency=721.7ms`, `P95 latency=787.1ms`, `Tokens in/out=340/5556`, `Total cost_usd=0.08436`
 - Notes:
 
 What to say in presentation:
