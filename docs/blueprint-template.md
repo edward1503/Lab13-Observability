@@ -71,10 +71,10 @@
 - [TASKS_COMPLETED]: **PII Scrubbing & Log Schema**: Thêm 2 pattern PII mới cho dữ liệu cá nhân tiếng Việt: passport_vn (hộ chiếu: 1 ký tự viết hoa + 7-8 số) và address_vn (địa chỉ: các từ khóa vị trí như đường, phường, quận, huyện, tỉnh, xã). Sắp xếp lại thứ tự CCCD trước phone_vn để tránh xung đột pattern (CCCD 12 chữ số). Kích hoạt scrub_event processor trong logging config để đảm bảo PII được làm sạch ở tất cả payload. Viết 9 test case toàn diện bao gồm: email, phone_vn, CCCD, credit card, passport_vn (7 và 8 chữ số), address_vn (nhiều biến thể), và negative case. Đạt 100% coverage cho các pattern PII. **Real LLM Integration**: Loại bỏ toàn bộ mock_llm, tạo app/llm.py với class RealLLM sử dụng OpenAI API, tích hợp GPT-4o-mini với định giá đúng ($0.15/1M input tokens, $0.60/1M output tokens). Cập nhật app/agent.py để sử dụng RealLLM, hỗ trợ incident simulation (cost_spike bằng cách chuyển sang gpt-4o). Xóa luôn mock_rag.py, tạo app/rag.py với knowledge base 12 chủ đề và hỗ trợ incident (rag_slow, tool_fail).
 - [EVIDENCE_LINK]: PII work: Commit 78b58ba + 4cf2496 + PR #1 (aeb68e7); Real LLM work: Commit 899bf28 (feat: use real llm instead of mock) + PR #2 (666999f)
 
-### [MEMBER_C_NAME]
+### Nguyễn Đôn Đức - 2A202600145
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: SLO Configuration: Cập nhật lý do (rationale) chuyên nghiệp cho các mục tiêu trong config/slo.yaml và bổ sung chỉ số P99 Latency. Alert Rules: Thiết lập hệ thống 7 quy tắc cảnh báo toàn diện trong config/alert_rules.yaml (bao gồm cả các cảnh báo về chất lượng AI và chi phí). Runbook: Viết tài liệu hướng dẫn xử lý sự cố chi tiết trong docs/alerts.md. OpenAI Integration: Chuyển đổi sang langfuse.openai để tự động hóa việc theo dõi model, token usage và cost. Nested Spans: Cấu trúc lại Trace theo dạng Waterfall (phân cấp). Hiện tại bạn có thể thấy rõ bước RAG (retrieve-docs) nằm riêng biệt với bước xử lý của LLM. Explicit Context: Tinh chỉnh để Trace chỉ gửi lên những dữ liệu cần thiết (input, output, user_id, session_id), giúp bảo mật và dễ đọc hơn.
+- [EVIDENCE_LINK]: 0642f78297ba27ccbb6615acae6b6c6b6ea707a7 - Merge pull request #5 from edward1503/feat/langfuse-best-practices , 19858502399eab473a4d796344381229c6475590 - update phase 3
 
 ### Nguyễn Lê Minh Luân - 2A202600398
 
