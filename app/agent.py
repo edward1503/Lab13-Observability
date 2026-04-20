@@ -4,9 +4,9 @@ import time
 from dataclasses import dataclass
 
 from . import metrics
-from .mock_llm import FakeLLM
-from .mock_rag import retrieve
+from .llm import LLM
 from .pii import hash_user_id, summarize_text
+from .rag import retrieve
 from .tracing import langfuse_context, observe
 
 
@@ -21,9 +21,9 @@ class AgentResult:
 
 
 class LabAgent:
-    def __init__(self, model: str = "claude-sonnet-4-5") -> None:
+    def __init__(self, model: str = "gpt-4o-mini") -> None:
         self.model = model
-        self.llm = FakeLLM(model=model)
+        self.llm = LLM(model=model)
 
     @observe()
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
@@ -63,8 +63,9 @@ class LabAgent:
         )
 
     def _estimate_cost(self, tokens_in: int, tokens_out: int) -> float:
-        input_cost = (tokens_in / 1_000_000) * 3
-        output_cost = (tokens_out / 1_000_000) * 15
+        # GPT-4o-mini: $0.15/1M input, $0.60/1M output
+        input_cost = (tokens_in / 1_000_000) * 0.15
+        output_cost = (tokens_out / 1_000_000) * 0.60
         return round(input_cost + output_cost, 6)
 
     def _heuristic_quality(self, question: str, answer: str, docs: list[str]) -> float:
