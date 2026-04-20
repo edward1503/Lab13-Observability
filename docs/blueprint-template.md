@@ -68,8 +68,8 @@
 
 ### Đào Anh Quân - 2A202600028
 
-- [TASKS_COMPLETED]: Thêm 2 pattern PII mới cho dữ liệu cá nhân tiếng Việt: passport_vn (hộ chiếu: 1 ký tự viết hoa + 7-8 số) và address_vn (địa chỉ: các từ khóa vị trí như đường, phường, quận, huyện, tỉnh, xã). Sắp xếp lại thứ tự CCCD trước phone_vn để tránh xung đột pattern (CCCD 12 chữ số). Kích hoạt scrub_event processor trong logging config để đảm bảo PII được làm sạch ở tất cả payload. Viết 9 test case toàn diện bao gồm: email, phone_vn, CCCD, credit card, passport_vn (7 và 8 chữ số), address_vn (nhiều biến thể), và negative case. Đạt 100% coverage cho các pattern PII.
-- [EVIDENCE_LINK]: Commit 78b58ba (feat: add Vietnamese passport and address PII patterns) + 4cf2496 (feat: add test cases for pii validation) + PR #1 (aeb68e7)
+- [TASKS_COMPLETED]: **PII Scrubbing & Log Schema**: Thêm 2 pattern PII mới cho dữ liệu cá nhân tiếng Việt: passport_vn (hộ chiếu: 1 ký tự viết hoa + 7-8 số) và address_vn (địa chỉ: các từ khóa vị trí như đường, phường, quận, huyện, tỉnh, xã). Sắp xếp lại thứ tự CCCD trước phone_vn để tránh xung đột pattern (CCCD 12 chữ số). Kích hoạt scrub_event processor trong logging config để đảm bảo PII được làm sạch ở tất cả payload. Viết 9 test case toàn diện bao gồm: email, phone_vn, CCCD, credit card, passport_vn (7 và 8 chữ số), address_vn (nhiều biến thể), và negative case. Đạt 100% coverage cho các pattern PII. **Real LLM Integration**: Loại bỏ toàn bộ mock_llm, tạo app/llm.py với class RealLLM sử dụng OpenAI API, tích hợp GPT-4o-mini với định giá đúng ($0.15/1M input tokens, $0.60/1M output tokens). Cập nhật app/agent.py để sử dụng RealLLM, hỗ trợ incident simulation (cost_spike bằng cách chuyển sang gpt-4o). Xóa luôn mock_rag.py, tạo app/rag.py với knowledge base 12 chủ đề và hỗ trợ incident (rag_slow, tool_fail).
+- [EVIDENCE_LINK]: PII work: Commit 78b58ba + 4cf2496 + PR #1 (aeb68e7); Real LLM work: Commit 899bf28 (feat: use real llm instead of mock) + PR #2 (666999f)
 
 ### [MEMBER_C_NAME]
 
