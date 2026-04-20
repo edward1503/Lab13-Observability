@@ -4,22 +4,22 @@
 
 ## 1. Team Metadata
 
-- [GROUP_NAME]:
-- [REPO_URL]:
+- [GROUP_NAME]: Lab13 Observability Team
+- [REPO_URL]: https://github.com/edward1503/Lab13-Observability.git
 - [MEMBERS]:
   - Member A: Nguyễn Duy Minh Hoàng - 2A202600155 | Role: Logging & PII
   - Member B: Đào Anh Quân - 2A202600028 | Role: PII Scrubbing & Log Schema
-  - Member C: [Name] | Role: SLO & Alerts
+  - Member C: Nguyễn Đôn Đức - 2A202600145 | Role: SLO & Alerts
   - Member D: Nguyễn Lê Minh Luân - 2A202600398 | Role: Tracing, Load Test & Incident Debugging
-  - Member E: [Name] | Role: Demo & Report
+  - Member E: Vu Quang Phuc | Role: Demo & Report
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
 
-- 
-- [TOTAL_TRACES_COUNT]:
-- 
+- [VALIDATE_LOGS_FINAL_SCORE]: 100/100
+- [TOTAL_TRACES_COUNT]: 30 traces observed in Langfuse during the final local run. Evidence: `docs/evidence/langfuse_trace_list.png`
+- [PII_LEAKS_FOUND]: 0
 
 ---
 
@@ -27,34 +27,34 @@
 
 ### 3.1 Logging & Tracing
 
-- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: [Path to image]
-- [EVIDENCE_PII_REDACTION_SCREENSHOT]: [Path to image]
-- [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: [Path to image]
-- [TRACE_WATERFALL_EXPLANATION]: (Briefly explain one interesting span in your trace)
+- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: docs/evidence/correlation_id.png
+- [EVIDENCE_PII_REDACTION_SCREENSHOT]: docs/evidence/pii_redaction.png
+- [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: docs/evidence/rag_slow_trace.png
+- [TRACE_WATERFALL_EXPLANATION]: Trong incident `rag_slow`, trace waterfall cho thấy span retrieval/RAG chiếm phần lớn tổng latency, trong khi bước LLM vẫn gần baseline. Điều đó chứng minh bottleneck nằm ở retrieval path chứ không phải model generation.
 
 ### 3.2 Dashboard & SLOs
 
-- [DASHBOARD_6_PANELS_SCREENSHOT]: [Path to image]
+- [DASHBOARD_6_PANELS_SCREENSHOT]: docs/evidence/dashboard_overview.png
 - [SLO_TABLE]:| SLI         |     Target | Window | Current Value |
   | ----------- | ---------: | ------ | ------------: |
-  | Latency P95 |   < 3000ms | 28d    |               |
-  | Error Rate  |       < 2% | 28d    |               |
-  | Cost Budget | < $2.5/day | 1d     |               |
+  | Latency P95 |   < 3000ms | 28d    | 818.7ms baseline; 5337.9ms during `rag_slow` |
+  | Error Rate  |       < 2% | 28d    | 0% on healthy baseline run |
+  | Cost Budget | < $2.5/day | 1d     | $0.02106 baseline; $0.07626 during `cost_spike` |
 
 ### 3.3 Alerts & Runbook
 
-- [ALERT_RULES_SCREENSHOT]: [Path to image]
-- 
+- [ALERT_RULES_SCREENSHOT]: docs/evidence/alert_rules.png
+- [ALERT_RULES_EXPLANATION]: Alert rules cover latency, error rate, budget spike, and low quality score; every rule links to a concrete runbook entry in `docs/alerts.md`.
 
 ---
 
 ## 4. Incident Response (Group)
 
-- [SCENARIO_NAME]: (e.g., rag_slow)
-- [SYMPTOMS_OBSERVED]:
-- [ROOT_CAUSE_PROVED_BY]: (List specific Trace ID or Log Line)
-- [FIX_ACTION]:
-- [PREVENTIVE_MEASURE]:
+- [SCENARIO_NAME]: rag_slow
+- [SYMPTOMS_OBSERVED]: Sau khi bật incident `rag_slow`, dashboard và load test cho thấy latency tăng mạnh từ baseline `P95=818.7ms` lên `P95=5337.9ms`.
+- [ROOT_CAUSE_PROVED_BY]: Trace ID `9929f3f51815697114ba6c9eedb671e7` trong Langfuse và waterfall screenshot `docs/evidence/rag_slow_trace.png`, nơi retrieval span là thành phần chiếm thời gian lớn nhất.
+- [FIX_ACTION]: Tắt incident `rag_slow`, chạy lại load test để xác nhận latency quay về baseline, và xác định retrieval là thành phần cần tối ưu hoặc cần fallback.
+- [PREVENTIVE_MEASURE]: Giữ alert `high_latency_p95`, tiếp tục theo dõi dashboard `/dashboard`, và dùng trace waterfall làm bước debug đầu tiên để phân biệt bottleneck nằm ở RAG hay LLM.
 
 ---
 
@@ -82,19 +82,19 @@
 - [GAINS]: Giúp nhóm có quy trình incident response có thể demo lại từ terminal đến Langfuse dashboard. Load-test summary giúp so sánh rõ baseline với incident bằng số liệu định lượng: request success/failure, P95 latency, token usage và cost. Fix Langfuse v3 tracing biến tracing từ trạng thái "có decorator nhưng không gửi trace" thành trace thật trên dashboard, giúp lấy Trace ID và waterfall làm bằng chứng root cause. Với `rag_slow`, evidence cho thấy latency tăng mạnh do RAG/retrieval bottleneck; với `cost_spike`, evidence cho thấy token/cost tăng trong khi latency gần baseline.
 - [EVIDENCE_LINK]: Commits: `c59c73e` (`feat: improve incident load test tooling`), `8d7cd13` (`docs: incident debugging evidence and root cause analysis`), `c9a23d3` (`docs: add local incident evidence results`), `ac3fb7e` (`fix: support Langfuse v3 tracing`), `45d7677` (`docs: add Langfuse incident evidence screenshots`). Screenshots: `docs/evidence/langfuse_trace_list.png`, `docs/evidence/rag_slow_trace.png`, `docs/evidence/cost_spike_trace.png`. Report: `docs/incident-response-summary.md`.
 
-### [MEMBER_E_NAME]
+### Vu Quang Phuc
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Hoàn thiện phần việc Member E bằng cách xây dựng dashboard 6 panels cho endpoint `/dashboard`, thêm các công cụ hỗ trợ dashboard (`scripts/dashboard.html`, `scripts/dashboard.py`, `scripts/serve_dashboard.py`), tổng hợp evidence cho correlation ID, PII redaction, alert rules, dashboard overview, và hoàn thiện blueprint report theo đúng flow demo mà instructor yêu cầu trong `message.txt`. Phần trình bày của Member E tập trung vào ACT 1 và ACT 5, tức là dẫn demo tổng thể và giải thích dashboard/SLO cho giảng viên.
+- [EVIDENCE_LINK]: Commit `493c1142841f1c0e7046a800f4eb8379fd501df6` (`Conplete the task dashboard`); evidence files: `docs/evidence/dashboard_overview.png`, `docs/evidence/correlation_id.png`, `docs/evidence/pii_redaction.png`, `docs/evidence/alert_rules.png`
 
 ---
 
 ## 6. Bonus Items (Optional)
 
-- [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
-- [BONUS_AUDIT_LOGS]: (Description + Evidence)
-- [BONUS_CUSTOM_METRIC]: (Description + Evidence)
+- [BONUS_COST_OPTIMIZATION]: Có evidence so sánh cost trước và sau incident `cost_spike`: baseline `Total cost_usd=0.02106` tăng lên `0.07626` khi token output tăng mạnh. Evidence: `docs/evidence/cost_spike_trace.png`, `docs/incident-response-summary.md`.
+- [BONUS_AUDIT_LOGS]: Chưa triển khai audit log tách riêng trong trạng thái repo hiện tại.
+- [BONUS_CUSTOM_METRIC]: Dashboard có custom metric `quality score` và time-series metrics history qua `/metrics/history`, dùng để hiển thị panel chất lượng và xu hướng theo thời gian.
 
 [VALIDATE_LOGS_FINAL_SCORE]: 100/100
 [PII_LEAKS_FOUND]: 0
-[SAMPLE_RUNBOOK_LINK]: [docs/alerts.md#L...]
+[SAMPLE_RUNBOOK_LINK]: docs/alerts.md#4-low-quality-score

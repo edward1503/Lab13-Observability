@@ -1,0 +1,391 @@
+# Demo Script — Day 13 Observability Lab
+
+> Tổng thời gian: ~10 phút | Người dẫn: Member E
+> Mỗi act có người phụ trách giải thích — đúng người đúng phần.
+
+---
+
+## TRƯỚC KHI LÊN DEMO (chuẩn bị)
+
+Mở sẵn 3 terminal + 2 tab browser:
+
+| Terminal | Vai trò |
+|---|---|
+| T1 | `uvicorn app.main:app --reload` (luôn chạy) |
+| T2 | Chạy scripts (load_test, inject_incident...) |
+| T3 | Xem logs real-time |
+
+| Browser Tab | URL |
+|---|---|
+| Tab 1 | `http://127.0.0.1:8000/dashboard` |
+| Tab 2 | Langfuse dashboard |
+
+**Khởi động:**
+```bash
+# T1
+uvicorn app.main:app --reload
+
+# T3 — watch logs
+Get-Content data/logs.jsonl -Wait   # Windows PowerShell
+# hoặc: tail -f data/logs.jsonl    # Linux/Mac
+```
+
+**Xóa logs cũ để demo sạch:**
+```bash
+echo "" > data/logs.jsonl
+```
+
+---
+
+## ACT 1 — App Running (30 giây)
+
+**Người trình bày**: Member E (dẫn chương trình)
+
+**Nói**: "Chúng tôi xây dựng một Observability Assistant API — AI agent trả lời câu hỏi về monitoring. Đây là health check."
+
+**Chạy trên T2:**
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+**Show kết quả:**
+```json
+{
+  "ok": true,
+  "tracing_enabled": true,
+  "incidents": {"rag_slow": false, "tool_fail": false, "cost_spike": false}
+}
+```
+
+**Nói**: "App chạy, Langfuse kết nối, không có incident nào đang active."
+
+---
+
+## ACT 2 — Logging & Correlation ID (2 phút)
+
+**Người trình bày**: Member A
+
+**Nói**: "Mỗi request vào hệ thống đều được gán một unique ID gọi là Correlation ID. ID này đi xuyên suốt tất cả log entries của request đó."
+
+**Chạy trên T2:**
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"user_id\":\"u01\",\"session_id\":\"s01\",\"feature\":\"qa\",\"message\":\"What should not appear in app logs?\"}"
+```
+
+**Show response headers:**
+```
+x-request-id: req-a1b2c3d4
+x-response-time-ms: 1243.55
+```
+
+**Chạy trên T3 — show log file, highlight correlation_id:**
+```bash
+# Tìm log của request vừa gửi:
+cat data/logs.jsonl | python -m json.tool
+```
+
+**Show trong logs — giải thích 3 fields quan trọng:**
+```json
+{
+  "ts": "2026-04-20T10:30:45Z",
+  "level": "info",
+  "event": "request_received",
+  "correlation_id": "req-a1b2c3d4",   ← "ID này giống nhau trong tất cả log của request"
+  "user_id_hash": "e3b0c44298fc",      ← "User ID đã hash — không lộ email gốc"
+  "session_id": "s01",
+  "feature": "qa",
+  "model": "gpt-4o-mini"
+}
+```
+
+**Giải thích code** — mở `app/middleware.py`:
+> "Middleware này chạy trước mọi request. Nó clear context cũ (tránh leak), lấy x-request-id từ header hoặc tạo mới dạng req-8hex, rồi bind vào structlog context để mọi log.info() sau đó tự động có correlation_id."
+
+---
+
+## ACT 3 — PII Scrubbing (1.5 phút)
+
+**Người trình bày**: Member B
+
+**Nói**: "User thường vô tình gửi data nhạy cảm. Hệ thống phải scrub trước khi log — nếu không là vi phạm GDPR."
+
+**Chạy trên T2 — request có PII:**
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"user_id\":\"u12\",\"session_id\":\"s12\",\"feature\":\"qa\",\"message\":\"My CCCD is 001099012345, I live at 123 duong Nguyen Hue, phuong Ben Nghe, what data should be scrubbed?\"}"
+```
+
+**Show trong logs — highlight redacted:**
+```json
+{
+  "event": "request_received",
+  "payload": {
+    "message_preview": "My CCCD is [REDACTED_CCCD], I live at [REDACTED_ADDRESS_VN], what data..."
+  }
+}
+```
+
+**Giải thích**: "Bốn loại PII chúng tôi scrub: email, phone, CCCD (12 digits), passport (letter+7-8 digits), và địa chỉ VN. Member B đã thêm passport và address — đây là 2 pattern quan trọng nhất với user Việt Nam."
+
+**Chạy test để confirm:**
+```bash
+python -m pytest tests/test_pii.py -v
+# → 9/9 passed
+```
+
+---
+
+## ACT 4 — Traces trên Langfuse (2 phút)
+
+**Người trình bày**: Member D
+
+**Nói**: "Log cho chúng tôi biết WHAT xảy ra. Trace cho chúng tôi biết WHERE và HOW LONG từng bước."
+
+**Chạy load test để có nhiều traces:**
+```bash
+python scripts/load_test.py --concurrency 3
+```
+
+**Mở Langfuse Tab — show trace list:**
+- Trỏ vào: "10+ traces đã lên, mỗi trace = 1 request"
+- Click vào 1 trace — show waterfall
+
+**Giải thích waterfall:**
+```
+Trace: req-a1b2c3d4
+├── agent.run()              1243ms total
+│   ├── [RAG retrieve]         38ms  ← keyword matching knowledge base
+│   └── [LLM generate]       1180ms  ← GPT-4o-mini call
+```
+
+**Nói**: "Từ waterfall này tôi thấy ngay bottleneck là LLM call chiếm 95% latency. RAG chỉ 38ms. Nếu latency tăng đột biến — tôi biết chỗ để debug."
+
+**Show metadata trên Langfuse:**
+- `user_id_hash` (hashed)
+- `session_id`
+- `tags: ["lab", "qa", "gpt-4o-mini"]`
+- `doc_count`, `query_preview` (scrubbed)
+
+---
+
+## ACT 5 — Dashboard 6 Panels (1.5 phút)
+
+**Người trình bày**: Member E
+
+**Mở Tab 1:** `http://127.0.0.1:8000/dashboard`
+
+**Walk through 6 panels:**
+
+| Panel | Chỉ vào | Nói |
+|---|---|---|
+| **Latency** | P95 badge "OK" | "P95 đang 1.2s — dưới SLO 3s, badge xanh" |
+| **Traffic** | Trend line | "Trend line tăng dần theo load test" |
+| **Error Rate** | 0% | "0 errors — hệ thống healthy" |
+| **Cost** | $0.0001/request | "GPT-4o-mini rất rẻ: $0.15/1M tokens" |
+| **Tokens** | Bar chart | "Input nhiều hơn output — RAG docs chiếm phần lớn" |
+| **Quality** | 0.85 | "Heuristic score 0.85/1.0 — trên SLO 0.75" |
+
+**Nói**: "Dashboard auto-refresh 5 giây, SLO badges đổi màu tự động khi breach."
+
+---
+
+## ACT 6 — Incident Injection & Root Cause (2 phút)
+
+**Người trình bày**: Member D
+
+**Nói**: "Đây là phần quan trọng nhất — simulate production incident và debug theo đúng quy trình."
+
+### Scenario: RAG Slow
+
+**Inject incident:**
+```bash
+# T2
+curl -X POST http://127.0.0.1:8000/incidents/rag_slow/enable
+```
+
+**Verify:**
+```bash
+curl http://127.0.0.1:8000/health
+# → "incidents": {"rag_slow": true, ...}
+```
+
+**Gửi requests trong khi incident active:**
+```bash
+python scripts/load_test.py --concurrency 2
+```
+
+**Quan sát dashboard** — P95 latency tăng lên ~2700ms, badge chuyển vàng
+
+**Debug flow — giải thích 3 bước:**
+
+**Bước 1 — Metrics:** "Dashboard báo P95 latency tăng từ 1.2s lên 2.7s. Đây là signal."
+
+**Bước 2 — Traces:** Mở Langfuse, filter traces gần đây → click trace có latency cao
+```
+Trace mới:
+├── agent.run()              2743ms
+│   ├── [RAG retrieve]       2538ms  ← ĐÂY! RAG chiếm 92%
+│   └── [LLM generate]        181ms
+```
+
+**Nói**: "Trace waterfall ngay lập tức chỉ ra: RAG span = 2538ms — bất thường. LLM vẫn bình thường."
+
+**Bước 3 — Logs:** Tìm log của trace đó:
+```bash
+# Dùng correlation_id từ trace để grep log:
+cat data/logs.jsonl | python -m json.tool | grep "req-xxxxx"
+```
+
+**Root Cause:** "Tìm ra `rag_slow` toggle đang ON trong incidents.py — `time.sleep(2.5)` được gọi mỗi request."
+
+**Fix:**
+```bash
+curl -X POST http://127.0.0.1:8000/incidents/rag_slow/disable
+python scripts/load_test.py --concurrency 2
+# → Latency trở về bình thường
+```
+
+---
+
+## ACT 7 — SLO & Alert Rules (1 phút)
+
+**Người trình bày**: Member C
+
+**Nói**: "Chúng tôi định nghĩa SLO và alert rules để team on-call biết khi nào cần action."
+
+**Show `config/slo.yaml`:**
+```yaml
+slis:
+  latency_p95_ms:
+    objective: 3000    # P95 < 3s
+    target: 99.5       # 99.5% requests phải pass
+  error_rate_pct:
+    objective: 2       # Error rate < 2%
+  daily_cost_usd:
+    objective: 2.5     # Budget $2.5/ngày
+  quality_score_avg:
+    objective: 0.75    # Quality > 0.75
+```
+
+**Show `config/alert_rules.yaml`:**
+```yaml
+alerts:
+  - name: high_latency_p95
+    severity: P2
+    condition: latency_p95_ms > 5000 for 30m
+    runbook: docs/alerts.md#1-high-latency-p95
+
+  - name: high_error_rate
+    severity: P1
+    condition: error_rate_pct > 5 for 5m
+    runbook: docs/alerts.md#2-high-error-rate
+
+  - name: cost_budget_spike
+    severity: P2
+    condition: hourly_cost_usd > 2x_baseline for 15m
+    runbook: docs/alerts.md#3-cost-budget-spike
+
+  - name: low_quality_score     ← "Member C thêm alert này"
+    severity: P2
+    condition: quality_score_avg < 0.6 for 10m
+    runbook: docs/alerts.md#4-low-quality-score
+```
+
+**Open `docs/alerts.md`** — chỉ vào runbook structure:
+> "Mỗi alert có runbook chi tiết: impact, first checks, mitigation steps. On-call engineer không cần đoán — làm theo từng bước."
+
+---
+
+## ACT 8 — Validate & Evidence (30 giây)
+
+**Người trình bày**: Member E
+
+```bash
+python -m scripts.validate_logs
+```
+
+**Show kết quả:**
+```
++ [PASSED] Missing required fields
++ [PASSED] Correlation ID propagation
++ [PASSED] Log enrichment
++ [PASSED] PII scrubbing
+
+Estimated Score: 90/100
+```
+
+**Nói**: "Score 90/100. Tất cả passing criteria đều đạt."
+
+---
+
+## KẾT THÚC DEMO (30 giây)
+
+**Member E tóm tắt:**
+
+> "Hôm nay chúng tôi đã implement đầy đủ observability stack cho một AI Agent:
+> - **Logs**: JSON structured, correlation ID xuyên suốt, PII được scrub (Member A + B)
+> - **Traces**: 10+ traces trên Langfuse, waterfall cho phép debug bottleneck trong seconds (Member D)
+> - **Metrics + Dashboard**: 6 panels real-time, SLO badges, auto-refresh (Member E)
+> - **Alerts**: 4 rules với runbook đầy đủ (Member C)
+>
+> Khi incident xảy ra: Metrics detect → Traces localize → Logs explain root cause.
+> Đây là workflow production-ready."
+
+---
+
+## Q&A PREPARATION
+
+### Câu hỏi thường gặp theo từng thành viên:
+
+**Cho Member A (Correlation ID):**
+- *"Tại sao cần clear_contextvars() ở đầu mỗi request?"*
+  > Vì FastAPI dùng async workers — nếu không clear, correlation_id của request trước có thể leak sang request sau đang xử lý trên cùng worker. Lỗi rất khó debug.
+
+- *"Tại sao format req-8hex thay vì UUID đầy đủ?"*
+  > UUID đầy đủ 36 chars làm log khó đọc. 8 hex chars (4 tỷ combinations) đủ unique cho một session demo/lab.
+
+**Cho Member B (PII):**
+- *"Tại sao CCCD pattern phải đặt trước phone_vn?"*
+  > CCCD là 12 digits bắt đầu bằng 0. Phone_vn cũng bắt đầu bằng 0 và match 10-11 digits. Nếu phone chạy trước, nó sẽ consume 10 digits đầu của CCCD và để lại 2 digits — CCCD pattern không còn match được nữa.
+
+- *"Pattern address_vn có false positive không?"*
+  > Có thể — "đường" trong câu thông thường như "con đường phía trước" sẽ match. Trade-off: false positive ít hại hơn false negative (leak địa chỉ thật). Trong production nên dùng NLP-based approach.
+
+**Cho Member C (SLO/Alerts):**
+- *"Tại sao P95 thay vì mean latency?"*
+  > Mean bị kéo bởi outlier. Nếu 95 requests xong trong 1s nhưng 5 requests mất 30s, mean = ~2.5s nhưng trải nghiệm của 5% user đó rất tệ. P95 đo "worst case của đa số".
+
+- *"Symptom-based alert nghĩa là gì?"*
+  > Alert khi triệu chứng ảnh hưởng user ("latency > 5s") thay vì alert theo nguyên nhân ("CPU > 80%"). CPU cao không nhất thiết ảnh hưởng user; latency cao thì chắc chắn ảnh hưởng.
+
+**Cho Member D (Traces/Incidents):**
+- *"Langfuse observe decorator làm gì?"*
+  > Wrap hàm `agent.run()`, tự động bắt start/end time, input/output, và gửi lên Langfuse. Không cần viết instrumentation code thủ công.
+
+- *"Làm sao biết trace nào là chậm?"*
+  > Filter trong Langfuse: sort by `latency DESC`, xem top 5 chậm nhất. Click vào → waterfall span chỉ ra ngay component nào mất nhiều thời gian.
+
+**Cho Member E (Dashboard):**
+- *"Dashboard lấy data từ đâu?"*
+  > Từ `/metrics` endpoint của FastAPI. Endpoint này gọi `metrics.snapshot()` — hàm đọc in-memory lists (latencies, costs, tokens, quality scores) và compute aggregates. Auto-refresh 5 giây.
+
+- *"Tại sao không dùng Grafana?"*
+  > Grafana cần Prometheus exporter + config phức tạp hơn. Với lab này, HTML dashboard đủ để demonstrate 6 required panels và SLO thresholds. Trong production thì Grafana tốt hơn.
+
+---
+
+## CHECKLIST TRƯỚC KHI DEMO
+
+- [ ] `uvicorn app.main:app --reload` chạy không lỗi
+- [ ] `http://127.0.0.1:8000/health` → `"ok": true`
+- [ ] `http://127.0.0.1:8000/dashboard` → dashboard hiện đủ 6 panels
+- [ ] Langfuse dashboard mở, đã login
+- [ ] `python -m scripts.validate_logs` → score ≥ 80
+- [ ] `python -m pytest tests/test_pii.py -v` → 9 passed
+- [ ] `data/logs.jsonl` đã xóa (demo sạch)
+- [ ] Tất cả terminal mở sẵn
+- [ ] `config/alert_rules.yaml` có ≥ 3 rules
+- [ ] `docs/blueprint-template.md` đã điền đầy đủ
