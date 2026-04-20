@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 
 from .incidents import STATE
+from .tracing import observe
 
 # Knowledge base: Observability Assistant for a production AI platform
 KNOWLEDGE_BASE: dict[str, list[str]] = {
@@ -115,6 +116,7 @@ _KEYWORD_MAP: dict[str, str] = {
 }
 
 
+@observe(name="retrieve-docs")
 def retrieve(message: str) -> list[str]:
     """Keyword-based retrieval from the observability knowledge base."""
     if STATE["tool_fail"]:

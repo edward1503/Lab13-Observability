@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from openai import OpenAI
+from langfuse.openai import OpenAI
 
 from .incidents import STATE
 

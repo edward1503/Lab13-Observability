@@ -25,7 +25,7 @@ class LabAgent:
         self.model = model
         self.llm = LLM(model=model)
 
-    @observe()
+    @observe(name="chat-response")
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
         started = time.perf_counter()
         docs = retrieve(message)
@@ -36,13 +36,14 @@ class LabAgent:
         cost_usd = self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens)
 
         langfuse_context.update_current_trace(
+            input=message,
+            output=response.text,
             user_id=hash_user_id(user_id),
             session_id=session_id,
             tags=["lab", feature, self.model],
         )
         langfuse_context.update_current_observation(
-            metadata={"doc_count": len(docs), "query_preview": summarize_text(message)},
-            usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens},
+            metadata={"doc_count": len(docs)},
         )
 
         metrics.record_request(

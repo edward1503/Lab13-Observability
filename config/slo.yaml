@@ -5,6 +5,10 @@ slis:
     objective: 3000
     target: 99.5
     note: Đảm bảo độ trễ đuôi (tail latency) không làm ảnh hưởng đến trải nghiệm người dùng cuối.
+  latency_p99_ms:
+    objective: 10000
+    target: 99.9
+    note: Giới hạn độ trễ tối đa cho các yêu cầu phức tạp nhất, tránh treo hệ thống.
   error_rate_pct:
     objective: 2
     target: 99.0
