@@ -62,8 +62,9 @@
 
 ### Nguyễn Duy Minh Hoàng - 2A202600155
 
-- [TASKS_COMPLETED]: Implemented correlation ID middleware, added `x-request-id` and `x-response-time-ms` response headers, enriched `/chat` logs with `user_id_hash`/`session_id`/`feature`/`model`/`env`, and added unit tests for middleware plus log context.
-- [EVIDENCE_LINK]: Branch `feat/logging-pii` (commit/PR link pending)
+- [TASKS_COMPLETED]: Đã hoàn thiện Correlation ID middleware, thêm các headers `x-request-id` và `x-response-time-ms` vào response; Làm giàu (enrich) log của endpoint `/chat` với `user_id_hash`, `session_id`, `feature`, `model`, `env`; Đã viết unit tests cho middleware và log context.
+- [GAINS]: (Giá trị mang lại) Giúp hệ thống có khả năng truy vết (traceability) 100% các request nhờ Correlation ID. Biến log từ văn bản thuần túy thành dữ liệu có cấu trúc phục vụ trực tiếp cho việc tạo Dashboard thống kê. Rút ngắn thời gian debug lỗi nhờ cung cấp sẵn mã ID cho khách hàng báo cáo khi có sự cố.
+- [EVIDENCE_LINK]: Commit ID: 1ecd560863dbbffaec9c875e271368ffbac4b944
 
 ### [MEMBER_B_NAME]
 
