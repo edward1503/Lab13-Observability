@@ -8,7 +8,7 @@
 - [REPO_URL]:
 - [MEMBERS]:
   - Member A: Nguyễn Duy Minh Hoàng - 2A202600155 | Role: Logging & PII
-  - Member B: [Name] | Role: Tracing & Enrichment
+  - Member B: Đào Anh Quân - 2A202600028 | Role: PII Scrubbing & Log Schema
   - Member C: [Name] | Role: SLO & Alerts
   - Member D: [Name] | Role: Load Test & Dashboard
   - Member E: [Name] | Role: Demo & Report
@@ -66,10 +66,10 @@
 - [GAINS]: (Giá trị mang lại) Giúp hệ thống có khả năng truy vết (traceability) 100% các request nhờ Correlation ID. Biến log từ văn bản thuần túy thành dữ liệu có cấu trúc phục vụ trực tiếp cho việc tạo Dashboard thống kê. Rút ngắn thời gian debug lỗi nhờ cung cấp sẵn mã ID cho khách hàng báo cáo khi có sự cố.
 - [EVIDENCE_LINK]: Commit ID: 1ecd560863dbbffaec9c875e271368ffbac4b944
 
-### [MEMBER_B_NAME]
+### Đào Anh Quân - 2A202600028
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Thêm 2 pattern PII mới cho dữ liệu cá nhân tiếng Việt: passport_vn (hộ chiếu: 1 ký tự viết hoa + 7-8 số) và address_vn (địa chỉ: các từ khóa vị trí như đường, phường, quận, huyện, tỉnh, xã). Sắp xếp lại thứ tự CCCD trước phone_vn để tránh xung đột pattern (CCCD 12 chữ số). Kích hoạt scrub_event processor trong logging config để đảm bảo PII được làm sạch ở tất cả payload. Viết 9 test case toàn diện bao gồm: email, phone_vn, CCCD, credit card, passport_vn (7 và 8 chữ số), address_vn (nhiều biến thể), và negative case. Đạt 100% coverage cho các pattern PII.
+- [EVIDENCE_LINK]: Commit 78b58ba (feat: add Vietnamese passport and address PII patterns) + 4cf2496 (feat: add test cases for pii validation) + PR #1 (aeb68e7)
 
 ### [MEMBER_C_NAME]
 

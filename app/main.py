@@ -7,13 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from structlog.contextvars import bind_contextvars
 
 from .agent import LabAgent
 from .incidents import disable, enable, status
 from .logging_config import configure_logging, get_logger
-from .metrics import record_error, snapshot
+from .metrics import history, record_error, snapshot
 from .middleware import CorrelationIdMiddleware
 from .pii import hash_user_id, summarize_text
 from .schemas import ChatRequest, ChatResponse
@@ -44,6 +44,18 @@ async def health() -> dict:
 @app.get("/metrics")
 async def metrics() -> dict:
     return snapshot()
+
+
+@app.get("/metrics/history")
+async def metrics_history() -> list:
+    return history()
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard() -> HTMLResponse:
+    from pathlib import Path
+    html_path = Path(__file__).parent.parent / "scripts" / "dashboard.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
 
 
 @app.post("/chat", response_model=ChatResponse)
