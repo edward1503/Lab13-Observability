@@ -4,22 +4,22 @@
 
 ## 1. Team Metadata
 
-- [GROUP_NAME]:
-- [REPO_URL]:
+- [GROUP_NAME]: Lab13 Observability Team
+- [REPO_URL]: https://github.com/edward1503/Lab13-Observability.git
 - [MEMBERS]:
-  - Member A: Nguyễn Duy Minh Hoàng - 2A202600155 | Role: Logging & PII
-  - Member B: [Name] | Role: Tracing & Enrichment
-  - Member C: [Name] | Role: SLO & Alerts
-  - Member D: [Name] | Role: Load Test & Dashboard
-  - Member E: [Name] | Role: Demo & Report
+  - Member A: Nguyễn Duy Minh Hoàng - 2A202600155 | Role: Logging & Correlation ID
+  - Member B: Quan Dao Anh | Role: PII Scrubbing & Log Schema
+  - Member C: edward1503 (name to confirm in team review) | Role: SLO & Alerts
+  - Member D: Team member D (name to confirm in team review) | Role: Tracing & Incident Debugging
+  - Member E: VuQuangPhuc | Role: Dashboard & Report Lead
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
 
-- 
-- [TOTAL_TRACES_COUNT]:
-- 
+- [VALIDATE_LOGS_FINAL_SCORE]: 100/100
+- [TOTAL_TRACES_COUNT]: 12 local trace captures during evidence generation; live Langfuse dashboard verification should be shown by member D when internet access is available.
+- [PII_LEAKS_FOUND]: 0
 
 ---
 
@@ -27,34 +27,34 @@
 
 ### 3.1 Logging & Tracing
 
-- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: [Path to image]
-- [EVIDENCE_PII_REDACTION_SCREENSHOT]: [Path to image]
-- [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: [Path to image]
-- [TRACE_WATERFALL_EXPLANATION]: (Briefly explain one interesting span in your trace)
+- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: docs/evidence/correlation_id.png
+- [EVIDENCE_PII_REDACTION_SCREENSHOT]: docs/evidence/pii_redaction.png
+- [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: docs/evidence/trace_waterfall.png
+- [TRACE_WATERFALL_EXPLANATION]: During the `rag_slow` incident capture, `retrieve()` consumed about `2500.2ms` out of a `2661.58ms` request, while `llm.generate()` stayed near `150.71ms`, so retrieval is the clear bottleneck.
 
 ### 3.2 Dashboard & SLOs
 
-- [DASHBOARD_6_PANELS_SCREENSHOT]: [Path to image]
+- [DASHBOARD_6_PANELS_SCREENSHOT]: docs/evidence/dashboard_overview.png
 - [SLO_TABLE]:| SLI         |     Target | Window | Current Value |
   | ----------- | ---------: | ------ | ------------: |
-  | Latency P95 |   < 3000ms | 28d    |               |
-  | Error Rate  |       < 2% | 28d    |               |
-  | Cost Budget | < $2.5/day | 1d     |               |
+  | Latency P95 |   < 3000ms | 28d    | 2651.0ms |
+  | Error Rate  |       < 2% | 28d    | 8.33% (incident-injection evidence window) |
+  | Cost Budget | < $2.5/day | 1d     | $0.032 |
 
 ### 3.3 Alerts & Runbook
 
-- [ALERT_RULES_SCREENSHOT]: [Path to image]
-- 
+- [ALERT_RULES_SCREENSHOT]: docs/evidence/alert_rules.png
+- [SAMPLE_RUNBOOK_LINK]: docs/alerts.md#4-low-quality-score
 
 ---
 
 ## 4. Incident Response (Group)
 
-- [SCENARIO_NAME]: (e.g., rag_slow)
-- [SYMPTOMS_OBSERVED]:
-- [ROOT_CAUSE_PROVED_BY]: (List specific Trace ID or Log Line)
-- [FIX_ACTION]:
-- [PREVENTIVE_MEASURE]:
+- [SCENARIO_NAME]: rag_slow
+- [SYMPTOMS_OBSERVED]: Latency P95 climbed sharply and one request reached roughly `2661.58ms`, while normal requests stayed near `150ms`.
+- [ROOT_CAUSE_PROVED_BY]: Local trace id `local-trace-0b11910a76` and correlation id `req-0000000c`; measured span timing shows `retrieve()` at `2500.2ms` versus `llm.generate()` at `150.71ms`.
+- [FIX_ACTION]: Disable the `rag_slow` incident, inspect retrieval dependency latency, and fall back to cached/general-answer mode if retrieval exceeds the latency budget.
+- [PREVENTIVE_MEASURE]: Add an alert on retrieval latency, set a timeout/circuit breaker for the vector-store path, and keep dashboard tracking on P95 plus error-rate spikes during incident drills.
 
 ---
 
@@ -66,34 +66,34 @@
 - [GAINS]: (Giá trị mang lại) Giúp hệ thống có khả năng truy vết (traceability) 100% các request nhờ Correlation ID. Biến log từ văn bản thuần túy thành dữ liệu có cấu trúc phục vụ trực tiếp cho việc tạo Dashboard thống kê. Rút ngắn thời gian debug lỗi nhờ cung cấp sẵn mã ID cho khách hàng báo cáo khi có sự cố.
 - [EVIDENCE_LINK]: Commit ID: 1ecd560863dbbffaec9c875e271368ffbac4b944
 
-### [MEMBER_B_NAME]
+### Quan Dao Anh
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Added Vietnamese passport and address PII patterns, enabled the scrubbing processor, and added PII-focused test coverage.
+- [EVIDENCE_LINK]: Commit IDs: 78b58ba8f621c03bb39ab7b5a899dbc5bcc4e9fc, 4cf2496d23443ce7fc9aeab7e71b9d65bae53f63
 
-### [MEMBER_C_NAME]
+### edward1503 (confirm full name in team review)
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Completed the SLO and alerting docs/config path used by the final evidence bundle, including the alert rules screenshot consumed in the report.
+- [EVIDENCE_LINK]: Repository ownership and current `config/slo.yaml`, `config/alert_rules.yaml`, and `docs/alerts.md` state in this branch; add teammate branch/commit URL during final team review if available.
 
-### [MEMBER_D_NAME]
+### Team Member D (confirm full name in team review)
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Tracing and incident-debugging ownership; should provide the live Langfuse dashboard screenshot and cloud trace verification during demo.
+- [EVIDENCE_LINK]: Add teammate trace screenshot / branch evidence during final team review.
 
-### [MEMBER_E_NAME]
+### VuQuangPhuc
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Built the evidence-generation workflow for the 6-panel dashboard, produced the screenshot bundle in `docs/evidence/`, completed the grading evidence sheet, completed this blueprint report, and added a short live-demo script for presentation flow.
+- [EVIDENCE_LINK]: Branch `phuc`; artifacts generated by `python3 scripts/generate_member_e_artifacts.py`
 
 ---
 
 ## 6. Bonus Items (Optional)
 
-- [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
-- [BONUS_AUDIT_LOGS]: (Description + Evidence)
-- [BONUS_CUSTOM_METRIC]: (Description + Evidence)
+- [BONUS_COST_OPTIMIZATION]: Cost-spike evidence was captured to compare baseline vs incident. In the local incident run, `tokens_out` increased from `138` to `516` and `cost_usd` increased from `$0.002181` to `$0.007851` (`3.6x`). Evidence: `docs/evidence/report-summary.json`.
+- [BONUS_AUDIT_LOGS]: Not implemented in this branch.
+- [BONUS_CUSTOM_METRIC]: The dashboard includes a quality-score panel and rolling average generated from the app's `quality_score` metric. Evidence: `docs/evidence/dashboard_overview.png`.
 
 [VALIDATE_LOGS_FINAL_SCORE]: 100/100
 [PII_LEAKS_FOUND]: 0
-[SAMPLE_RUNBOOK_LINK]: [docs/alerts.md#L...]
+[SAMPLE_RUNBOOK_LINK]: docs/alerts.md#4-low-quality-score

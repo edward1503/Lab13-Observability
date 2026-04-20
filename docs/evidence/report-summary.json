@@ -1,0 +1,53 @@
+{
+  "group_name": "Lab13 Observability Team",
+  "repo_url": "https://github.com/edward1503/Lab13-Observability.git",
+  "member_e_name": "VuQuangPhuc",
+  "request_count": 13,
+  "trace_count_local": 12,
+  "trace_ids_local": [
+    "local-trace-03c7263297",
+    "local-trace-0b11910a76",
+    "local-trace-464b22087b",
+    "local-trace-5d33f3c13e",
+    "local-trace-6a2c3f2157",
+    "local-trace-7b6b1ca9d0",
+    "local-trace-a163817951",
+    "local-trace-aa4731d360",
+    "local-trace-abb3f54960",
+    "local-trace-c450bfdb51",
+    "local-trace-e64ff3061f",
+    "local-trace-f3e890e800"
+  ],
+  "validate_logs_score": 100,
+  "pii_leaks_found": 0,
+  "current_values": {
+    "latency_p95_ms": 2651.0,
+    "error_rate_pct": 8.33,
+    "daily_cost_usd": 0.032,
+    "quality_score_avg": 0.875
+  },
+  "rag_slow": {
+    "trace_id": "local-trace-0b11910a76",
+    "correlation_id": "req-0000000c",
+    "retrieve_ms": 2500.2,
+    "llm_generate_ms": 150.71,
+    "total_ms": 2661.58
+  },
+  "cost_spike": {
+    "trace_id": "local-trace-03c7263297",
+    "correlation_id": "req-0000000d",
+    "baseline_tokens_out": 138,
+    "spike_tokens_out": 516,
+    "baseline_cost_usd": 0.002181,
+    "spike_cost_usd": 0.007851,
+    "ratio_tokens_out": 3.74,
+    "ratio_cost": 3.6
+  },
+  "evidence_paths": {
+    "dashboard": "docs/evidence/dashboard_overview.png",
+    "correlation": "docs/evidence/correlation_id.png",
+    "pii": "docs/evidence/pii_redaction.png",
+    "alerts": "docs/evidence/alert_rules.png",
+    "trace": "docs/evidence/trace_waterfall.png"
+  }
+}
