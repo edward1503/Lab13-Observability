@@ -10,7 +10,7 @@
   - Member A: Nguyễn Duy Minh Hoàng - 2A202600155 | Role: Logging & PII
   - Member B: Đào Anh Quân - 2A202600028 | Role: PII Scrubbing & Log Schema
   - Member C: [Name] | Role: SLO & Alerts
-  - Member D: [Name] | Role: Load Test & Dashboard
+  - Member D: Nguyễn Lê Minh Luân - 2A202600398 | Role: Tracing, Load Test & Incident Debugging
   - Member E: [Name] | Role: Demo & Report
 
 ---
@@ -76,10 +76,11 @@
 - [TASKS_COMPLETED]:
 - [EVIDENCE_LINK]:
 
-### [MEMBER_D_NAME]
+### Nguyễn Lê Minh Luân - 2A202600398
 
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+- [TASKS_COMPLETED]: Hoàn thiện workflow Member D cho tracing, load test và incident debugging; cấu hình Langfuse local qua `.env` nhưng không commit secrets; nâng cấp `scripts/load_test.py` để tạo traffic có kiểm soát với `--concurrency`, `--num-requests`, `--timeout` và in summary gồm completed/failed, average latency, P95 latency, tokens in/out, total cost; nâng cấp `scripts/inject_incident.py` để bật/tắt `rag_slow`, `cost_spike`, `tool_fail` và kiểm tra `--status`; sửa `app/tracing.py` để tương thích Langfuse v3 thay vì fallback no-op; thêm regression tests cho load-test tooling, incident tooling và Langfuse tracing import; chạy baseline, `rag_slow`, `cost_spike`, xác nhận traces trên Langfuse và chụp screenshot evidence.
+- [GAINS]: Giúp nhóm có quy trình incident response có thể demo lại từ terminal đến Langfuse dashboard. Load-test summary giúp so sánh rõ baseline với incident bằng số liệu định lượng: request success/failure, P95 latency, token usage và cost. Fix Langfuse v3 tracing biến tracing từ trạng thái "có decorator nhưng không gửi trace" thành trace thật trên dashboard, giúp lấy Trace ID và waterfall làm bằng chứng root cause. Với `rag_slow`, evidence cho thấy latency tăng mạnh do RAG/retrieval bottleneck; với `cost_spike`, evidence cho thấy token/cost tăng trong khi latency gần baseline.
+- [EVIDENCE_LINK]: Commits: `c59c73e` (`feat: improve incident load test tooling`), `8d7cd13` (`docs: incident debugging evidence and root cause analysis`), `c9a23d3` (`docs: add local incident evidence results`), `ac3fb7e` (`fix: support Langfuse v3 tracing`), `45d7677` (`docs: add Langfuse incident evidence screenshots`). Screenshots: `docs/evidence/langfuse_trace_list.png`, `docs/evidence/rag_slow_trace.png`, `docs/evidence/cost_spike_trace.png`. Report: `docs/incident-response-summary.md`.
 
 ### [MEMBER_E_NAME]
 
