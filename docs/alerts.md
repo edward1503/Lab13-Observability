@@ -51,3 +51,42 @@
   - adjust retrieval top_k
   - refine system prompt instructions
   - disable specific features or models if they underperform
+
+## 5. Extreme latency P99
+- Severity: P1
+- Trigger: `latency_p99 > 10000 for 5m`
+- Impact: Service is becoming unresponsive for many users
+- First checks:
+  1. Check for infinite loops in LLM response generation
+  2. Inspect system load (CPU/Memory) if applicable
+  3. Verify if an upstream provider (OpenAI/Langfuse) is down
+- Mitigation:
+  - Implement circuit breakers
+  - Rate limit incoming requests
+  - Scale up resources
+
+## 6. Token consumption warning
+- Severity: P2
+- Trigger: `tokens_out_total > 1000000`
+- Impact: Risk of exceeding API quota and service interruption
+- First checks:
+  1. Identify users or sessions with abnormally high usage
+  2. Check if a specific prompt is causing "verbose" output
+  3. Verify if `cost_spike` incident is enabled
+- Mitigation:
+  - Apply stricter output token limits
+  - Switch to a more compact prompting style
+  - Block abusive users if necessary
+
+## 7. High runtime error rate
+- Severity: P1
+- Trigger: `error_breakdown['RuntimeError'] > 10 for 5m`
+- Impact: Users are experiencing frequent hard failures
+- First checks:
+  1. Group logs by error message to find common patterns
+  2. Verify connections to mock dependencies (RAG/LLM)
+  3. Check for recent code deployments or config changes
+- Mitigation:
+  - Rollback to previous stable version
+  - Disable failing tools or features
+  - Fix underlying code bugs and redeploy

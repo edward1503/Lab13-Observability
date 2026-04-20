@@ -23,3 +23,21 @@ alerts:
     type: quality-based
     owner: ai-quality-team
     runbook: docs/alerts.md#4-low-quality-score
+  - name: extreme_latency_p99
+    severity: P1
+    condition: latency_p99 > 10000 for 5m
+    type: symptom-based
+    owner: team-oncall
+    runbook: docs/alerts.md#5-extreme-latency-p99
+  - name: token_consumption_warning
+    severity: P2
+    condition: tokens_out_total > 1000000
+    type: resource-based
+    owner: finops-owner
+    runbook: docs/alerts.md#6-token-consumption-warning
+  - name: high_runtime_error_rate
+    severity: P1
+    condition: error_breakdown['RuntimeError'] > 10 for 5m
+    type: symptom-based
+    owner: team-oncall
+    runbook: docs/alerts.md#7-high-runtime-error-rate
